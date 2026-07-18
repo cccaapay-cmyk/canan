@@ -1,65 +1,82 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title></title>
+
   <style>
-    html, body {
+    html,
+    body {
       margin: 0;
       padding: 0;
-      background: #fff;
+      background: #ffffff;
       display: none;
     }
   </style>
 </head>
+
 <body>
 
 <script>
 (() => {
-  const rawNumbers = [
-    "15815976316",
-    "13434429150",
-    "13434419550",
-    "17532063487",
-    "13434439852",
-    "16134549351",
-    "17532063179",
-    "13434439422"
-  ];
+  "use strict";
 
-  const KEY_BAG = "wa_shuffle_bag_page2";
-  const KEY_LAST = "wa_last_pick_page2";
+ const rawNumbers = [
+  "19122797730",
+  "17174247485",
+  "16824519940",
+  "18042775956",
+  "15043441932",
+  "15412394330",
+  "17634479817",
+  "14303673935",
+  "13145659056",
+  "14706411231",
+  "12075089235",
+  "15854034913",
+  "15752238338",
+  "19715161935",
+  "16013247360",
+  "18285107689",
+  "18313126813",
+  "18457992520",
+  "18562658085",
+  "18594157065",
+  "18654381864",
+  "12534076972",
+  "14139492132",
+  "15105423211",
+  "14404544102",
+  "12523678411",
+  "18083120269",
+  "12272785687",
+  "12312252905",
+  "12342833802",
+  "12404625820",
+  "12522722244",
+  "12624051267",
+  "13126879543",
+  "13147232690",
+  "13154030739",
+  "13166655096"
+];
 
-  function clean(list) {
-    const seen = new Set();
-    const result = [];
+  const numbers = [...new Set(
+    rawNumbers
+      .map(number => String(number).replace(/\D/g, ""))
+      .filter(number => number.length >= 8 && number.length <= 15)
+  )];
 
-    for (let i = 0; i < list.length; i++) {
-      const value = String(list[i]).trim();
-      if (/^\d+$/.test(value) && !seen.has(value)) {
-        seen.add(value);
-        result.push(value);
-      }
-    }
+  const KEY_BAG = "wa_shuffle_bag_page1_v3";
+  const KEY_LAST = "wa_last_pick_page1_v3";
 
-    return result;
-  }
+  const LOG_URL =
+    "https://script.google.com/macros/s/AKfycbyhzAHINH1fv7GX1-e_kF1sa_gdgF1pWWbdqvaOTkgEUBfdoJMyYZb1iDGKeehYmkxXpA/exec";
 
-  const numbers = clean(rawNumbers);
+  const PAGE_NAME = "page1_whatsapp";
 
-  function shuffle(arr) {
-    const copy = arr.slice();
-
-    for (let i = copy.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [copy[i], copy[j]] = [copy[j], copy[i]];
-    }
-
-    return copy;
-  }
-
-  function getStorageItem(key) {
+  function getItem(key) {
     try {
       return localStorage.getItem(key);
     } catch {
@@ -67,56 +84,110 @@
     }
   }
 
-  function setStorageItem(key, value) {
+  function setItem(key, value) {
     try {
       localStorage.setItem(key, value);
     } catch {}
   }
 
+  function shuffle(array) {
+    const result = array.slice();
+
+    for (let i = result.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [result[i], result[j]] = [result[j], result[i]];
+    }
+
+    return result;
+  }
+
   function loadBag() {
     try {
-      const raw = getStorageItem(KEY_BAG);
-      if (!raw) return null;
+      const raw = getItem(KEY_BAG);
 
-      const bag = JSON.parse(raw);
-      if (!Array.isArray(bag) || bag.length === 0) return null;
+      if (!raw) {
+        return null;
+      }
 
-      const validBag = bag.filter(n => numbers.includes(n));
+      const savedBag = JSON.parse(raw);
+
+      if (!Array.isArray(savedBag)) {
+        return null;
+      }
+
+      const validBag = savedBag.filter(number =>
+        numbers.includes(number)
+      );
+
       return validBag.length ? validBag : null;
     } catch {
       return null;
     }
   }
 
-  function pick() {
-    if (!numbers.length) return "";
+  function pickNumber() {
+    if (!numbers.length) {
+      return "";
+    }
 
+    const lastNumber = getItem(KEY_LAST) || "";
     let bag = loadBag();
-    const last = getStorageItem(KEY_LAST) || "";
 
-    if (!bag || bag.length === 0) {
+    if (!bag) {
       bag = shuffle(numbers);
 
-      if (bag.length > 1 && bag[0] === last) {
+      if (
+        bag.length > 1 &&
+        lastNumber &&
+        bag[0] === lastNumber
+      ) {
         [bag[0], bag[1]] = [bag[1], bag[0]];
       }
     }
 
-    const current = bag.shift();
+    const selectedNumber = bag.shift();
 
-    setStorageItem(KEY_BAG, JSON.stringify(bag));
-    setStorageItem(KEY_LAST, current);
+    setItem(KEY_BAG, JSON.stringify(bag));
+    setItem(KEY_LAST, selectedNumber);
 
-    return current;
+    return selectedNumber;
   }
 
-  const n = pick();
+  function logVisit(number) {
+    try {
+      const params = new URLSearchParams({
+        mode: "log",
+        number: number,
+        page: PAGE_NAME,
+        ua: navigator.userAgent || "",
+        ref: document.referrer || "",
+        url: location.href,
+        timestamp: String(Date.now()),
+        random: Math.random().toString(36).slice(2)
+      });
 
-  if (n) {
-    window.location.replace("https://wa.me/" + n);
+      fetch(`${LOG_URL}?${params.toString()}`, {
+        method: "GET",
+        mode: "no-cors",
+        keepalive: true,
+        cache: "no-store"
+      }).catch(() => {});
+    } catch {}
+  }
+
+  const selectedNumber = pickNumber();
+
+  if (selectedNumber) {
+    logVisit(selectedNumber);
+
+    // 立即跳转，不再等待250毫秒
+    window.location.replace(
+      "https://wa.me/" + encodeURIComponent(selectedNumber)
+    );
   } else {
     document.body.style.display = "block";
-    document.body.textContent = "No valid WhatsApp number found.";
+    document.body.textContent =
+      "No valid WhatsApp number found.";
   }
 })();
 </script>
